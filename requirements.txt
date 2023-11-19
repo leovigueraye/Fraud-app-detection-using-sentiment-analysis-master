@@ -1,0 +1,4 @@
+google-play-scraper==1.2.4
+matplotlib==3.7.0
+nltk==3.8.1
+streamlit==1.28.1
