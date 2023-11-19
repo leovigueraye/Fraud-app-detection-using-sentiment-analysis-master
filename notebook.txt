@@ -1,0 +1,208 @@
+this app collects a play store apps url and scrapes its review using sentiment analysis for reviews with bad words and reviews with good words and based on the reviews the score is calculated to determine if  an app is good or bad based on its reviews, i wanted the score to be visualized in a pie chart or so with a pie where score is less than or equal to 0.0085, it suggests a "Fraud Alert.", If the score is between 0.0085 and 0.012, it indicates that the content might not be very safe or has poor-quality features, If the score is greater than 0.012, it suggests that the content is "Safe to use." i dont rellay know something like this or a way to visualize the score variable counting the bad reviews and the good reviews and if the bad reviews are greater than the good reviews determines the app is fraudlent, not safe ans so on how do i achieve this
+
+
+
+import re
+import string
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+import matplotlib.pyplot as plt
+import keras
+import nltk
+from nltk.corpus import stopwords
+from nltk.stem import SnowballStemmer
+from keras.preprocessing.text import Tokenizer
+from keras.preprocessing.sequence import pad_sequences
+from keras.models import Sequential
+from keras.layers import Dense, Flatten, LSTM, Conv1D, MaxPooling1D, Dropout, Activation,Bidirectional,TimeDistributed
+from keras.layers.embeddings import Embedding
+
+
+from sklearn.feature_extraction.text import CountVectorizer
+from keras.preprocessing.text import Tokenizer
+from keras.preprocessing.sequence import pad_sequences
+from keras.models import Sequential
+from keras.layers import Dense, Embedding, LSTM, SpatialDropout1D
+from sklearn.model_selection import train_test_split
+from keras.utils.np_utils import to_categorical
+from sklearn.utils import resample
+from sklearn.utils import shuffle
+from sklearn.metrics import confusion_matrix,classification_report
+import re
+
+data = pd.read_csv('dataset.csv')
+data= data.dropna()
+
+def preprocess(text):  
+    text = text.translate(string.punctuation)
+    text = text.lower().split()
+    stops = set(stopwords.words("english"))
+    text = [w for w in text if not w in stops and len(w) >= 3]
+    text = " ".join(text)
+    text = re.sub(r"[^A-Za-z0-9^,!.\/'+-=]", " ", text)
+    text = re.sub(r"what's", "what is ", text)
+    text = re.sub(r"\'s", " ", text)
+    text = re.sub(r"\'ve", " have ", text)
+    text = re.sub(r"n't", " not ", text)
+    text = re.sub(r"i'm", "i am ", text)
+    text = re.sub(r"\'re", " are ", text)
+    text = re.sub(r"\'d", " would ", text)
+    text = re.sub(r"\'ll", " will ", text)
+    text = re.sub(r",", " ", text)
+    text = re.sub(r"\.", " ", text)
+    text = re.sub(r"!", " ! ", text)
+    text = re.sub(r"\/", " ", text)
+    text = re.sub(r"\^", " ^ ", text)
+    text = re.sub(r"\+", " + ", text)
+    text = re.sub(r"\-", " - ", text)
+    text = re.sub(r"\=", " = ", text)
+    text = re.sub(r"'", " ", text)
+    text = re.sub(r"(\d+)(k)", r"\g<1>000", text)
+    text = re.sub(r":", " : ", text)
+    text = re.sub(r" e g ", " eg ", text)
+    text = re.sub(r" b g ", " bg ", text)
+    text = re.sub(r" u s ", " american ", text)
+    text = re.sub(r"\0s", "0", text)
+    text = re.sub(r" 9 11 ", "911", text)
+    text = re.sub(r"e - mail", "email", text)
+    text = re.sub(r"j k", "jk", text)
+    text = re.sub(r"\s{2,}", " ", text)
+    text = text.split()
+    stemmer = SnowballStemmer('english')
+    stemmed_words = [stemmer.stem(word) for word in text]
+    text = " ".join(stemmed_words)
+
+    return text
+
+data['text'] = data['text'].apply(lambda x: x.lower()) #lower caseing
+data['text'] = data['text'].apply((lambda x: re.sub('[^a-zA-z0-9\s]','',x))) # removing special chars
+data['text'] = data.text.str.replace('rt','') # removing "rt"
+
+max_fatures = 2000
+tokenizer = Tokenizer(num_words=max_fatures, split=' ')
+tokenizer.fit_on_texts(data['text'].values)
+X = tokenizer.texts_to_sequences(data['text'].values)
+X = pad_sequences(X)
+# print(X[:2])
+
+Y = pd.get_dummies(data['class']).values
+X_train, X_test, Y_train, Y_test = train_test_split(X,Y, test_size = 0.20, random_state = 42)
+print(X_train.shape,Y_train.shape)
+
+embed_dim = 128
+lstm_out = 196
+
+model = Sequential()
+model.add(Embedding(max_fatures, embed_dim,input_length = X.shape[1]))
+model.add(SpatialDropout1D(0.4))
+model.add(LSTM(lstm_out, dropout=0.2, recurrent_dropout=0.2))
+model.add(Dense(2,activation='softmax'))
+model.compile(loss = 'categorical_crossentropy', optimizer='adam',metrics = ['accuracy'])
+print(model.summary())
+
+batch_size = 128
+model.fit(X_train, Y_train, epochs = 3, batch_size=batch_size, verbose = 1)
+
+data_majority = data[data['class'] == 0]
+data_minority = data[data['class'] == 1]
+
+bias = data_minority.shape[0]/data_majority.shape[0]
+
+train = pd.concat([data_majority.sample(frac=0.8,random_state=200),
+         data_minority.sample(frac=0.8,random_state=200)])
+test = pd.concat([data_majority.drop(data_majority.sample(frac=0.8,random_state=200).index),
+        data_minority.drop(data_minority.sample(frac=0.8,random_state=200).index)])
+
+train = shuffle(train)
+test = shuffle(test)
+
+print('positive data in training:',(train['class'] == 1).sum())
+print('negative data in training:',(train['class'] == 0).sum())
+print('positive data in test:',(test['class'] == 1).sum())
+print('negative data in test:',(test['class'] == 0).sum())
+
+data_majority = train[train['class'] == 0]
+data_minority = train[train['class'] == 1]
+
+print("majority class before upsample:",data_majority.shape)
+print("minority class before upsample:",data_minority.shape)
+
+# Upsample minority class
+data_minority_upsampled = resample(data_minority, 
+                                 replace=True,     # sample with replacement
+                                 n_samples= data_majority.shape[0],    # to match majority class
+                                 random_state=123) # reproducible results
+ 
+# Combine majority class with upsampled minority class
+data_upsampled = pd.concat([data_majority, data_minority_upsampled])
+ 
+# Display new class counts
+print("After upsampling\n",data_upsampled['class'].value_counts(),sep = "")
+
+max_fatures = 2000
+tokenizer = Tokenizer(num_words=max_fatures, split=' ')
+tokenizer.fit_on_texts(data['text'].values) # training with whole data
+
+X_train = tokenizer.texts_to_sequences(data_upsampled['text'].values)
+X_train = pad_sequences(X_train,maxlen=29)
+Y_train = pd.get_dummies(data_upsampled['class']).values
+print('x_train shape:',X_train.shape)
+
+X_test = tokenizer.texts_to_sequences(test['text'].values)
+X_test = pad_sequences(X_test,maxlen=29)
+Y_test = pd.get_dummies(test['class']).values
+print("x_test shape", X_test.shape)
+embed_dim = 128
+lstm_out = 192
+
+
+# model
+model1 = Sequential()
+model1.add(Embedding(max_fatures, embed_dim,input_length = X_train.shape[1]))
+model1.add(SpatialDropout1D(0.4))
+model1.add(LSTM(lstm_out, dropout=0.4, recurrent_dropout=0.4))
+model1.add(Dense(2,activation='softmax'))
+model1.compile(loss = 'categorical_crossentropy', optimizer='adam',metrics = ['accuracy'])
+print(model1.summary())
+
+batch_size = 128
+# also adding weights
+class_weights = {0: 1 ,
+                1: 1.6/bias }
+model1.fit(X_train, Y_train, epochs = 15, batch_size=batch_size, verbose = 1,
+          class_weight=class_weights)
+
+Y_pred = model1.predict_classes(X_test,batch_size = batch_size)
+df_test = pd.DataFrame({'true': Y_test.tolist(), 'pred':Y_pred})
+df_test['true'] = df_test['true'].apply(lambda x: np.argmax(x))
+print(classification_report(df_test.true, df_test.pred))
+
+model2 = Sequential()
+model2.add(Embedding(max_fatures, embed_dim,input_length = X_train.shape[1]))
+model2.add(SpatialDropout1D(0.4))
+model2.add(Bidirectional(LSTM(100, dropout=0.4, recurrent_dropout=0.4)))
+model2.add(Dense(2,activation='softmax'))
+model2.compile(loss = 'binary_crossentropy', optimizer='adam',metrics = ['accuracy'])
+print(model2.summary())
+
+batch_size = 128
+class_weights = {0: 1 ,
+                1: 1.6/bias }
+model2.fit(X_train, Y_train, epochs = 15, batch_size=batch_size, verbose = 1,
+          class_weight=class_weights)
+
+Y_pred = model2.predict_classes(X_test,batch_size = batch_size)
+df_test = pd.DataFrame({'true': Y_test.tolist(), 'pred':Y_pred})
+df_test['true'] = df_test['true'].apply(lambda x: np.argmax(x))
+print(classification_report(df_test.true, df_test.pred))
+
+model2.evaluate(X_test,Y_test)
+
+model2.save('bilstm_final.h5') 
+
+new_model = tf.keras.models.load_model('bilstm_final.h5')
+new_model.summary()
+
+loss, acc = new_model.evaluate(X_test, Y_test, verbose=1)
+print('Restored model, accuracy: {:5.2f}%'.format(100 * acc))
