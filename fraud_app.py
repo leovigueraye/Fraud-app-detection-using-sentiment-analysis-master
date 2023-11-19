@@ -6,8 +6,8 @@ from nltk.corpus import stopwords
 from collections import Counter
 import matplotlib.pyplot as plt
 
-import nltk
-nltk.download('stopwords')
+# import nltk
+# nltk.download('stopwords')
 # Function to extract app ID from the URL
 def extract_app_id(url):
     pattern = r'id=(?P<app_id>[a-zA-Z0-9._]+)'
