@@ -7,6 +7,7 @@ from collections import Counter
 import matplotlib.pyplot as plt
 
 import nltk
+nltk.download('stopwords')
 nltk.download('punkt')
 # Function to extract app ID from the URL
 def extract_app_id(url):
@@ -98,9 +99,12 @@ def main():
 
             # Determine verdict
             if pos_percent >= neg_percent:
-                st.success("Verdict: This is a good app!")
+                verdict_message = "Verdict: This is a good app!"
+                st.markdown(f"<p style='text-align:center; font-size:20px; color:green;'>{verdict_message}</p>", unsafe_allow_html=True)
             else:
-                st.error("Verdict: This is a Fraud/Faulty app!")
+                verdict_message = "Verdict: This is a Fraud/Faulty app!"
+                st.markdown(f"<p style='text-align:center; font-size:20px; color:red;'>{verdict_message}</p>", unsafe_allow_html=True)
+
 
 if __name__ == "__main__":
     main()
