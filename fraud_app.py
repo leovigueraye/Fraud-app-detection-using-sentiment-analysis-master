@@ -56,9 +56,9 @@ def generate_pie_chart(pos_percent, neg_percent):
 
 # Streamlit App
 def main():
-    tuple = ("Welcome to")
+    tuple = "Welcome to"
     st.markdown(f"<p style='text-align:center; font-size:25px;>{tuple}</p>", unsafe_allow_html=True)
-    title = ("Sentiment Analysis-based model for fraud app detection")
+    title = "Sentiment Analysis-based model for fraud app detection"
     st.markdown(f"<p style='text-align:center; font-size:25px;>{title}</p>", unsafe_allow_html=True)
 
     # Input field for the app URL
