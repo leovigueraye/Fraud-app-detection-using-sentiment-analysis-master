@@ -56,7 +56,10 @@ def generate_pie_chart(pos_percent, neg_percent):
 
 # Streamlit App
 def main():
-    st.title("Fraud/ Faulty App Detection")
+    tuple = ("Welcome to")
+    st.markdown(f"<p style='text-align:center; font-size:25px;>{tuple}</p>", unsafe_allow_html=True)
+    title = ("Sentiment Analysis-based model for fraud app detection")
+    st.markdown(f"<p style='text-align:center; font-size:25px;>{title}</p>", unsafe_allow_html=True)
 
     # Input field for the app URL
     url = st.text_input("Enter App URL:")
@@ -99,11 +102,11 @@ def main():
 
             # Determine verdict
             if pos_percent >= neg_percent:
-                verdict_message = "Verdict: This is a good app!"
-                st.markdown(f"<p style='text-align:center; font-size:20px; color:green;'>{verdict_message}</p>", unsafe_allow_html=True)
+                verdict_message = "Verdict: You can download this app!"
+                st.markdown(f"<p style='text-align:center; font-size:30px; color:lightgreen;'>{verdict_message}</p>", unsafe_allow_html=True)
             else:
                 verdict_message = "Verdict: This is a Fraud/Faulty app!"
-                st.markdown(f"<p style='text-align:center; font-size:20px; color:red;'>{verdict_message}</p>", unsafe_allow_html=True)
+                st.markdown(f"<p style='text-align:center; font-size:30px; color:#FF4433;'>{verdict_message}</p>", unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
